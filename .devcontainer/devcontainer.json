@@ -1,0 +1,17 @@
+{
+  "name": "Bevy Development (Minimal)",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-bookworm",
+
+  // Bevyのネイティブコード補完・静的解析に必要な最小限のシステムライブラリのみ
+  "updateContentCommand": "sudo apt-get update && sudo apt-get install -y pkg-config libx11-dev libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev lld clang",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "fill-labs.dependi"
+      ]
+    }
+  }
+}

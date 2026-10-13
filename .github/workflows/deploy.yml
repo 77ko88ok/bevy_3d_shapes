@@ -1,0 +1,62 @@
+name: Deploy Bevy WASM to GitHub Pages
+
+on:
+  push:
+    branches: [ "main" ] # mainブランチにプッシュされたときに自動実行
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 1. Rust環境のセットアップ (WASMターゲット追加)
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      # 2. キャッシュの設定（2回目以降のビルドを高速化するため）
+      - name: Cache cargo & trunk
+        uses: Swatinem/rust-cache@v2
+
+      # 3. Trunkのインストール（事前ビルド済みバイナリを取得して高速化）
+      - name: Install Trunk
+        run: |
+          TRUNK_VERSION=$(curl -s https://api.github.com/repos/trunk-rs/trunk/releases/latest | grep 'tag_name' | cut -d'"' -f4)
+          curl -sSL "https://github.com/trunk-rs/trunk/releases/download/${TRUNK_VERSION}/trunk-x86_64-unknown-linux-gnu.tar.gz" | tar -xzf - -C /usr/local/bin/
+
+      # 4. リリースモードでWASMビルドを実行
+      - name: Build with Trunk
+        run: trunk build --release --public-url "/bevy_3d_shapes/"
+
+      - name: Copy assets to dist
+        run: cp -r assets dist/
+
+      # 5. 生成された成果物をGitHub Pagesにアップロード
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  # 6. GitHub Pagesへのデプロイ処理
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-and-deploy
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
